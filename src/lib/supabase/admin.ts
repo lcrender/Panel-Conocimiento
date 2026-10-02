@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { ConfigError } from "@/lib/errors";
 import { getSupabaseEnv } from "./env";
 
-// Solo para crear o invitar usuarios en Auth.
+// La service role solo se usa en el servidor: crear usuarios de Auth y leer el secreto
+// de OpenAI después de que la sesión del usuario autorizó el proyecto.
 // Las membresías se insertan con la sesión del administrador, así RLS evalúa su permiso.
 export function createAdminClient() {
   const { url } = getSupabaseEnv();

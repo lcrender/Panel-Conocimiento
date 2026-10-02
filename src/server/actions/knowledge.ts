@@ -11,6 +11,7 @@ import { toUserMessage } from "@/lib/errors";
 import { firstIssue, readChecked, readText, type ActionState } from "@/lib/form";
 import { parseKeywords } from "@/lib/validation/keywords";
 import { knowledgeSchema } from "@/lib/validation/schemas";
+import { readProjectOpenAIKey } from "@/lib/openai/project-key";
 import { EmbeddingError } from "@/modules/knowledge/openai";
 import { syncKnowledgeEmbedding } from "@/modules/knowledge/persist-embedding";
 
@@ -67,6 +68,8 @@ export async function saveKnowledge(_state: ActionState, formData: FormData): Pr
 
   const categoryOk = await categoryBelongsToProject(session.supabase, parsed.data.categoryId, projectId);
   if (!categoryOk) return { error: "La categoría no pertenece al proyecto." };
+  const apiKey = await requireProjectKey(session.supabase, projectId, clientId);
+  if (typeof apiKey !== "string") return apiKey;
 
   const payload = {
     client_id: clientId,
@@ -92,7 +95,7 @@ export async function saveKnowledge(_state: ActionState, formData: FormData): Pr
       question: payload.question,
       answer: payload.answer,
       keywords: payload.keywords,
-    });
+    }, apiKey);
     revalidatePath("/conocimiento");
     revalidatePath("/probar");
     if (embedded) return embedded;
@@ -109,11 +112,26 @@ export async function saveKnowledge(_state: ActionState, formData: FormData): Pr
     question: payload.question,
     answer: payload.answer,
     keywords: payload.keywords,
-  });
+  }, apiKey);
   revalidatePath("/conocimiento");
   revalidatePath("/probar");
   if (embedded?.error) redirect(`/conocimiento/${data.id}?error=` + encodeURIComponent(embedded.error));
   redirect(`/conocimiento/${data.id}?ok=1`);
+}
+
+async function requireProjectKey(
+  supabase: Awaited<ReturnType<typeof getSessionContext>>["supabase"],
+  projectId: string,
+  clientId: string,
+): Promise<string | ActionState> {
+  try {
+    const apiKey = await readProjectOpenAIKey(supabase, projectId, clientId);
+    if (!apiKey) return { error: "Seleccioná una clave de OpenAI para este proyecto antes de guardar conocimiento." };
+    return apiKey;
+  } catch (error) {
+    if (error instanceof EmbeddingError) return { error: error.message };
+    throw error;
+  }
 }
 
 async function embedKnowledge(
@@ -127,9 +145,10 @@ async function embedKnowledge(
     answer: string;
     keywords: string[];
   },
+  apiKey: string,
 ): Promise<ActionState | null> {
   try {
-    await syncKnowledgeEmbedding(supabase, item);
+    await syncKnowledgeEmbedding(supabase, item, apiKey);
     return null;
   } catch (error) {
     if (error instanceof EmbeddingError) return { error: error.message };
@@ -163,6 +182,10 @@ export async function duplicateKnowledge(formData: FormData) {
   if (!current || !target || !canProject(target, PERMISSIONS.knowledgeWrite)) {
     redirect("/conocimiento?error=" + encodeURIComponent("No tenés permiso para duplicar este contenido."));
   }
+  const apiKey = await requireProjectKey(supabase, current.project_id, current.client_id);
+  if (typeof apiKey !== "string") {
+    redirect("/conocimiento?error=" + encodeURIComponent(apiKey.error ?? "Seleccioná una clave de OpenAI para este proyecto."));
+  }
 
   const { data, error } = await supabase
     .from("knowledge_items")
@@ -192,7 +215,7 @@ export async function duplicateKnowledge(formData: FormData) {
     question: current.question,
     answer: current.answer,
     keywords: current.keywords,
-  });
+  }, apiKey);
   revalidatePath("/conocimiento");
   revalidatePath("/probar");
   if (embedded?.error) redirect(`/conocimiento/${data.id}?error=` + encodeURIComponent(embedded.error));

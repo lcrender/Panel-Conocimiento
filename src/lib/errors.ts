@@ -26,6 +26,7 @@ export function toUserMessage(error: { message?: string; code?: string }) {
     }
     if (message.includes("memberships_scope")) return "Ese usuario ya tiene ese acceso.";
     if (message.includes("profiles_email")) return "Ya existe un usuario con ese email.";
+    if (message.includes("client_openai_keys_name")) return "Ya existe una clave con ese nombre en este cliente.";
     return "Ya existe un registro igual.";
   }
 

@@ -8,6 +8,7 @@ export type KnowledgeSearchHit = {
   priority: KnowledgePriority;
   categoryName: string | null;
   allowAiRewrite: boolean;
+  keywords: string[];
   similarity: number | null;
   lexicalScore: number | null;
   matchedByKeyword: boolean;

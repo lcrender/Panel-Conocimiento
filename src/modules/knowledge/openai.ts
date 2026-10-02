@@ -13,20 +13,16 @@ export class EmbeddingError extends Error {
   }
 }
 
-export function hasOpenAIEnv() {
-  return Boolean(process.env.OPENAI_API_KEY?.trim());
-}
-
-export async function createEmbedding(input: string) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw new EmbeddingError("Falta OPENAI_API_KEY para generar el embedding.");
+export async function createEmbedding(input: string, apiKey: string) {
+  const key = apiKey.trim();
+  if (!key) throw new EmbeddingError("Este proyecto no tiene una clave de OpenAI seleccionada.");
 
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/embeddings", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

@@ -22,7 +22,7 @@ export type EmbeddingSource = {
   keywords: string[];
 };
 
-export async function syncKnowledgeEmbedding(supabase: DbClient, item: EmbeddingSource) {
+export async function syncKnowledgeEmbedding(supabase: DbClient, item: EmbeddingSource, apiKey: string) {
   const document = buildKnowledgeDocument(item);
   const contentHash = hashKnowledgeDocument(document);
 
@@ -36,7 +36,7 @@ export async function syncKnowledgeEmbedding(supabase: DbClient, item: Embedding
   const parsed = current.data ? hashRow.safeParse(current.data) : null;
   if (parsed?.success && parsed.data.content_hash === contentHash) return;
 
-  const embedding = await createEmbedding(document);
+  const embedding = await createEmbedding(document, apiKey);
   const saved = await supabase.from("knowledge_item_embeddings").upsert(
     {
       knowledge_item_id: item.id,
@@ -66,7 +66,12 @@ const storedHash = z.object({
   content_hash: z.string().nullable(),
 });
 
-export async function backfillProjectEmbeddings(supabase: DbClient, projectId: string, clientId: string) {
+export async function backfillProjectEmbeddings(
+  supabase: DbClient,
+  projectId: string,
+  clientId: string,
+  apiKey: string,
+) {
   const itemsResult = await supabase
     .from("knowledge_items")
     .select("id, client_id, project_id, title, question, answer, keywords")
@@ -100,14 +105,18 @@ export async function backfillProjectEmbeddings(supabase: DbClient, projectId: s
       keywords: item.keywords,
     });
     if (stored.get(item.id) === hashKnowledgeDocument(document)) continue;
-    await syncKnowledgeEmbedding(supabase, {
-      id: item.id,
-      clientId: item.client_id,
-      projectId: item.project_id,
-      title: item.title,
-      question: item.question,
-      answer: item.answer,
-      keywords: item.keywords,
-    });
+    await syncKnowledgeEmbedding(
+      supabase,
+      {
+        id: item.id,
+        clientId: item.client_id,
+        projectId: item.project_id,
+        title: item.title,
+        question: item.question,
+        answer: item.answer,
+        keywords: item.keywords,
+      },
+      apiKey,
+    );
   }
 }

@@ -56,6 +56,13 @@ const NAV: NavDefinition[] = [
     scope: "client",
   },
   {
+    href: "/claves",
+    label: "Claves OpenAI",
+    group: "administracion",
+    permission: PERMISSIONS.integrationsManage,
+    scope: "client",
+  },
+  {
     href: "/usuarios",
     label: "Usuarios",
     group: "administracion",

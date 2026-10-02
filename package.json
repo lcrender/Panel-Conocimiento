@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/domain/access.test.ts src/lib/validation/keywords.test.ts src/modules/knowledge/document.test.ts"
+    "test": "tsx --test src/domain/access.test.ts src/lib/validation/keywords.test.ts src/modules/knowledge/document.test.ts src/modules/knowledge/answer.test.ts src/lib/openai/key.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

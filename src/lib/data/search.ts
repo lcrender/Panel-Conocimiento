@@ -35,6 +35,7 @@ export async function searchKnowledgeLexical(projectId: string, query: string): 
     priority: row.priority,
     categoryName: row.category_name,
     allowAiRewrite: row.allow_ai_rewrite,
+    keywords: [],
     similarity: null,
     lexicalScore: row.score,
     matchedByKeyword: false,

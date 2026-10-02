@@ -31,9 +31,15 @@ export function hashKnowledgeDocument(document: string) {
 export function similarityThreshold() {
   const raw = process.env.KNOWLEDGE_SIMILARITY_THRESHOLD;
   if (!raw?.trim()) return DEFAULT_SIMILARITY_THRESHOLD;
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value < 0 || value > 1) return DEFAULT_SIMILARITY_THRESHOLD;
-  return value;
+  return parseSimilarityThresholdInput(raw) ?? DEFAULT_SIMILARITY_THRESHOLD;
+}
+
+export function parseSimilarityThresholdInput(raw: string) {
+  const trimmed = raw.trim().replace(",", ".");
+  if (!trimmed) return null;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value) || value < 0 || value > 1) return null;
+  return Math.round(value * 1000) / 1000;
 }
 
 export function toVectorLiteral(values: number[]) {
@@ -86,10 +92,11 @@ export function selectKnowledgeMatches<T extends { id: string; similarity: numbe
   hits: T[],
   query: string,
   threshold: number,
+  limit = SEMANTIC_MATCH_COUNT,
 ) {
   const selected = hits.filter(
     (hit) => (hit.similarity !== null && hit.similarity >= threshold) || matchesKeyword(query, hit.keywords),
   );
   selected.sort((left, right) => (right.similarity ?? -1) - (left.similarity ?? -1));
-  return selected.slice(0, SEMANTIC_MATCH_COUNT);
+  return selected.slice(0, limit);
 }

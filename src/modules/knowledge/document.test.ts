@@ -8,6 +8,7 @@ import {
   matchesKeyword,
   relatedHits,
   selectKnowledgeMatches,
+  parseSimilarityThresholdInput,
   similarityThreshold,
   toVectorLiteral,
 } from "./document";
@@ -30,6 +31,13 @@ test("el hash cambia cuando cambia el texto", () => {
   const second = hashKnowledgeDocument("tarjetas");
   assert.notEqual(first, second);
   assert.equal(first, hashKnowledgeDocument("tarjeta"));
+});
+
+test("el umbral del proyecto acepta un número entre 0 y 1", () => {
+  assert.equal(parseSimilarityThresholdInput("0,42"), 0.42);
+  assert.equal(parseSimilarityThresholdInput("1"), 1);
+  assert.equal(parseSimilarityThresholdInput("2"), null);
+  assert.equal(parseSimilarityThresholdInput(""), null);
 });
 
 test("el umbral inválido vuelve al valor por defecto", () => {

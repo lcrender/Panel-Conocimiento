@@ -232,7 +232,8 @@ insert into public.permissions (slug, name, description, sort_order) values
   ('categories.write', 'Editar categorías', 'Crear y editar categorías', 90),
   ('knowledge.read', 'Ver conocimiento', 'Consultar la base de conocimiento', 100),
   ('knowledge.write', 'Editar conocimiento', 'Crear y editar contenido', 110),
-  ('activity.read', 'Ver actividad', 'Consultar el registro de actividad', 120);
+  ('activity.read', 'Ver actividad', 'Consultar el registro de actividad', 120),
+  ('integrations.manage', 'Claves de OpenAI', 'Cargar claves del cliente y elegir cuál usa cada proyecto', 130);
 
 insert into public.roles (slug, name, description, scope, allows_permission_overrides, sort_order) values
   ('super_admin', 'Super admin', 'Administra toda la plataforma.', 'platform', false, 10),
@@ -249,7 +250,7 @@ join public.permissions p on
   or (r.slug = 'client_admin' and p.slug in (
     'projects.read', 'users.read', 'users.manage',
     'categories.read', 'categories.write',
-    'knowledge.read', 'knowledge.write', 'activity.read'
+    'knowledge.read', 'knowledge.write', 'activity.read', 'integrations.manage'
   ))
   or (r.slug = 'editor' and p.slug in (
     'projects.read', 'categories.read', 'knowledge.read', 'knowledge.write'

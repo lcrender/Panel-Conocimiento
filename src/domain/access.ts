@@ -67,3 +67,10 @@ export function canAnyClient(access: AccessSnapshot, permission: string) {
 export function canProject(project: ProjectAccess | null, permission: string) {
   return project?.permissions.includes(permission) ?? false;
 }
+
+export function canClient(access: AccessSnapshot, clientId: string, permission: string) {
+  return (
+    canPlatform(access, permission) ||
+    access.clients.some((client) => client.id === clientId && client.permissions.includes(permission))
+  );
+}

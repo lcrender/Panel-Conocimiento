@@ -14,6 +14,7 @@ export const PERMISSIONS = {
   knowledgeRead: "knowledge.read",
   knowledgeWrite: "knowledge.write",
   activityRead: "activity.read",
+  integrationsManage: "integrations.manage",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

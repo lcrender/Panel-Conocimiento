@@ -3,13 +3,15 @@ import { z } from "zod";
 import { embedName } from "@/lib/data/common";
 import { searchKnowledgeLexical } from "@/lib/data/search";
 import { createClient, type DbClient } from "@/lib/supabase/server";
-import { matchesKeyword, selectKnowledgeMatches, similarityThreshold } from "@/modules/knowledge/document";
-import { EmbeddingError, hasOpenAIEnv } from "@/modules/knowledge/openai";
+import { getProjectAgentSettings } from "@/modules/ai/settings";
+import { matchesKeyword, selectKnowledgeMatches } from "@/modules/knowledge/document";
+import { readProjectOpenAIKey } from "@/lib/openai/project-key";
+import { EmbeddingError } from "@/modules/knowledge/openai";
 import { backfillProjectEmbeddings } from "@/modules/knowledge/persist-embedding";
 import { searchKnowledgeSemantic } from "@/modules/knowledge/semantic-search";
 import { NO_RELATED_KNOWLEDGE, type KnowledgeSearchHit, type KnowledgeSearchOutcome } from "@/modules/knowledge/types";
 
-const LEXICAL_NOTICE = "Falta OPENAI_API_KEY. Esta consulta usó la búsqueda por palabras.";
+const LEXICAL_NOTICE = "Este proyecto no tiene una clave de OpenAI seleccionada. Esta consulta usó la búsqueda por palabras.";
 
 export async function searchKnowledge(input: {
   projectId: string;
@@ -18,7 +20,9 @@ export async function searchKnowledge(input: {
   canWrite: boolean;
 }): Promise<KnowledgeSearchOutcome> {
   const query = input.query.trim();
-  if (!hasOpenAIEnv()) {
+  const supabase = await createClient();
+  const apiKey = await readProjectOpenAIKey(supabase, input.projectId, input.clientId);
+  if (!apiKey) {
     const hits = await searchKnowledgeLexical(input.projectId, query);
     return {
       mode: "lexical",
@@ -28,16 +32,18 @@ export async function searchKnowledge(input: {
     };
   }
 
-  const supabase = await createClient();
   if (input.canWrite) {
-    await backfillProjectEmbeddings(supabase, input.projectId, input.clientId);
+    await backfillProjectEmbeddings(supabase, input.projectId, input.clientId, apiKey);
   }
 
+  const settings = await getProjectAgentSettings(input.projectId);
   const hits = await rankSemanticHits(supabase, {
     projectId: input.projectId,
     clientId: input.clientId,
     query,
-    threshold: similarityThreshold(),
+    apiKey,
+    threshold: settings.similarityThreshold,
+    limit: settings.maxResults,
   });
 
   return {
@@ -61,10 +67,15 @@ const activeItem = z.object({
 
 async function rankSemanticHits(
   supabase: DbClient,
-  input: { projectId: string; clientId: string; query: string; threshold: number },
+  input: { projectId: string; clientId: string; query: string; apiKey: string; threshold: number; limit: number },
 ): Promise<KnowledgeSearchHit[]> {
   const [semantic, listed] = await Promise.all([
-    searchKnowledgeSemantic(supabase, input),
+    searchKnowledgeSemantic(supabase, {
+      projectId: input.projectId,
+      clientId: input.clientId,
+      query: input.query,
+      apiKey: input.apiKey,
+    }),
     supabase
       .from("knowledge_items")
       .select("id, title, question, answer, keywords, priority, allow_ai_rewrite, categories(name)")
@@ -91,7 +102,7 @@ async function rankSemanticHits(
     keywords: item.keywords,
   }));
 
-  return selectKnowledgeMatches(merged, input.query, input.threshold).map((hit) => ({
+  return selectKnowledgeMatches(merged, input.query, input.threshold, input.limit).map((hit) => ({
     id: hit.id,
     title: hit.title,
     question: hit.question,
@@ -99,6 +110,7 @@ async function rankSemanticHits(
     priority: hit.priority,
     categoryName: hit.categoryName,
     allowAiRewrite: hit.allowAiRewrite,
+    keywords: hit.keywords,
     similarity: hit.similarity,
     lexicalScore: null,
     matchedByKeyword: matchesKeyword(input.query, hit.keywords),

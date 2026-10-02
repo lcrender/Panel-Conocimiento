@@ -17,9 +17,9 @@ const semanticRow = z.object({
 
 export async function searchKnowledgeSemantic(
   supabase: DbClient,
-  input: { projectId: string; clientId: string; query: string },
+  input: { projectId: string; clientId: string; query: string; apiKey: string },
 ) {
-  const embedding = await createEmbedding(input.query.trim().slice(0, 500));
+  const embedding = await createEmbedding(input.query.trim().slice(0, 500), input.apiKey);
   const { data, error } = await supabase.rpc("search_knowledge_semantic", {
     p_project_id: input.projectId,
     p_client_id: input.clientId,
