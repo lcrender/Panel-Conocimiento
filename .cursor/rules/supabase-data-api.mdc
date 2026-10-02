@@ -1,0 +1,19 @@
+---
+description: Seguridad de la Data API de Supabase para este proyecto
+alwaysApply: true
+---
+
+# Data API de Supabase
+
+Configuración acordada del proyecto. No proponer cambiarla.
+
+- **Enable Data API:** activado. El panel usa `supabase-js`.
+- **Automatically expose new tables:** desactivado. Los privilegios se otorgan a mano en la migración.
+- **Enable automatic RLS:** desactivado. Cada tabla nueva lleva `ENABLE ROW LEVEL SECURITY` y sus políticas en SQL.
+
+Al crear una tabla en `public`:
+
+1. Activar RLS en la misma migración.
+2. No dejar políticas abiertas para `anon`.
+3. Hacer `GRANT` solo de las operaciones que el rol `authenticated` necesita.
+4. Revocar el resto. Una tabla sin `GRANT` no queda expuesta por la API.
